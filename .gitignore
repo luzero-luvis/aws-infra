@@ -1,0 +1,59 @@
+# ==================================
+# Terraform & OpenTofu (all folders)
+# ==================================
+**/.terraform/
+**/.terraform.lock.hcl
+**/*.tfstate
+**/*.tfstate.*
+**/*.backup
+**/*.tfvars
+**/*.tfvars.json
+**/crash.log
+**/override.tf
+**/override.tf.json
+
+# ==================================
+# Ansible (all folders)
+# ==================================
+**/inventory.ini
+**/*.retry
+**/*vault*.yml
+**/*vault*.yaml
+
+# ==================================
+# SSH Keys & Sensitive Credentials
+# ==================================
+**/*.pem
+**/*.key
+**/*.crt
+**/ssh_config
+**/*.kubeconfig
+**/update-kubeconfig.sh
+**/*.env
+**/secrets.yaml
+**/secret*.yaml
+
+
+# ==================================
+# Terraform State Backups
+# ==================================
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/terraform.tfstate.backup
+
+# ==================================
+# OS / Editor Junk Files
+# ==================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+.vscode/
+.idea/
+
+# ==================================
+# Logs & misc
+# ==================================
+*.log
+

@@ -1,0 +1,274 @@
+---
+- name: Initialize Kubernetes cluster on master
+  hosts: masters
+  become: true
+  gather_facts: true
+  any_errors_fatal: true
+  vars:
+    kubeadm_config_local: "../ansible/kubeadm-config.yaml"
+    kubeadm_config_remote: "/home/ubuntu/kubeadm-config.yaml"
+  tasks:
+    - name: Create apt keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: inventory_hostname == groups['masters'][0]
+      run_once: true
+
+    - name: Download Kubernetes apt key
+      shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      when: inventory_hostname == groups['masters'][0]
+      run_once: true
+
+    - name: Add Kubernetes apt repository
+      shell: echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
+      args:
+        creates: /etc/apt/sources.list.d/kubernetes.list
+      when: inventory_hostname == groups['masters'][0]
+      run_once: true
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      when: inventory_hostname == groups['masters'][0]
+      run_once: true
+
+    - name: Ensure Kubernetes tools are installed
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+      when: inventory_hostname == groups['masters'][0]
+      run_once: true
+
+    - name: Hold Kubernetes packages
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+      when: inventory_hostname == groups['masters'][0]
+      run_once: true
+
+    - name: Copy kubeadm config to master
+      copy:
+        src: "{{ kubeadm_config_local }}"
+        dest: "{{ kubeadm_config_remote }}"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+      when: inventory_hostname == groups['masters'][0]
+      run_once: true
+
+    - name: Check if cluster is already initialized
+      stat:
+        path: /etc/kubernetes/admin.conf
+      register: k8s_admin_conf
+      when: inventory_hostname == groups['masters'][0]
+
+    - name: Initialize Kubernetes cluster on master
+      command: kubeadm init --config {{ kubeadm_config_remote }}
+      when:
+        - inventory_hostname == groups['masters'][0]
+        - not k8s_admin_conf.stat.exists
+      register: kubeadm_init
+      run_once: true
+
+    - name: Save kubeadm init output for debugging
+      copy:
+        content: "{{ kubeadm_init.stdout }}"
+        dest: "/home/ubuntu/kubeadm-init-output.txt"
+      when:
+        - inventory_hostname == groups['masters'][0]
+        - kubeadm_init is defined
+        - kubeadm_init.stdout is defined
+
+    - name: Create .kube directory for ubuntu user
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+      when: inventory_hostname == groups['masters'][0]
+
+    - name: Copy admin.conf to ubuntu's .kube/config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        remote_src: yes
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+      when: inventory_hostname == groups['masters'][0]
+
+    - name: Fetch join command from master
+      command: kubeadm token create --print-join-command
+      when: inventory_hostname == groups['masters'][0]
+      register: join_command
+      changed_when: false
+      run_once: true
+
+    - name: Copy join command to local
+      copy:
+        content: "{{ join_command.stdout }}"
+        dest: "/tmp/kubeadm-join-command.txt"
+      delegate_to: localhost
+      become: false
+      when:
+        - inventory_hostname == groups['masters'][0]
+        - join_command.stdout is defined
+
+- name: Join worker nodes to the cluster
+  hosts: workers
+  become: true
+  gather_facts: true
+  any_errors_fatal: true
+  tasks:
+    - name: Check if worker is already joined
+      stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: worker_kubelet_conf
+
+    - name: Create apt keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: not worker_kubelet_conf.stat.exists
+
+    - name: Download Kubernetes apt key
+      shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      when: not worker_kubelet_conf.stat.exists
+
+    - name: Add Kubernetes apt repository
+      shell: echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
+      args:
+        creates: /etc/apt/sources.list.d/kubernetes.list
+      when: not worker_kubelet_conf.stat.exists
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      when: not worker_kubelet_conf.stat.exists
+
+    - name: Ensure Kubernetes tools are installed
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+      when: not worker_kubelet_conf.stat.exists
+
+    - name: Hold Kubernetes packages
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+      when: not worker_kubelet_conf.stat.exists
+
+    - name: Copy join command to workers
+      copy:
+        src: /tmp/kubeadm-join-command.txt
+        dest: /tmp/kubeadm-join-command.txt
+      when: not worker_kubelet_conf.stat.exists
+
+    - name: Join workers to cluster
+      shell: "{{ hostvars[groups['masters'][0]].join_command.stdout }}"
+      when:
+        - hostvars[groups['masters'][0]].join_command.stdout is defined
+        - not worker_kubelet_conf.stat.exists
+      register: join_result
+
+- name: Verify cluster status
+  hosts: masters[0]
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Wait for all nodes to be ready
+      command: kubectl get nodes
+      register: nodes_status
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      until: nodes_status.stdout.find("NotReady") == -1
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Get cluster info
+      command: kubectl cluster-info
+      register: cluster_info
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Display cluster info
+      debug:
+        var: cluster_info.stdout_lines
+
+    - name: Get nodes status
+      command: kubectl get nodes -o wide
+      register: nodes_status
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Display nodes status
+      debug:
+        var: nodes_status.stdout_lines
+
+    - name: Get all pods status
+      command: kubectl get pods --all-namespaces
+      register: pods_status
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Display pods status
+      debug:
+        var: pods_status.stdout_lines
+
+    - name: Fetch kubeconfig for local use
+      fetch:
+        src: /home/ubuntu/.kube/config
+        dest: "../kubeconfig"
+        flat: yes
+
+    - name: Set correct permissions on local kubeconfig
+      file:
+        path: "../kubeconfig"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
+- name: Set file descriptor limits and restart kubelet
+  hosts: all
+  become: true
+  tasks:
+    - name: Add file descriptor limits to /etc/security/limits.conf
+      lineinfile:
+        path: /etc/security/limits.conf
+        line: "{{ item }}"
+        create: yes
+      loop:
+        - "*               soft    nofile          1048576"
+        - "*               hard    nofile          1048576"
+        - "root            soft    nofile          1048576"
+        - "root            hard    nofile          1048576"
+      when: ansible_distribution == 'Ubuntu'
+
+    - name: Restart kubelet
+      systemd:
+        name: kubelet
+        state: restarted
+      when: ansible_distribution == 'Ubuntu'

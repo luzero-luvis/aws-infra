@@ -1,0 +1,33 @@
+---
+- name: Update resolv.conf on all Kubernetes nodes
+  hosts: all
+  become: yes
+  vars:
+    resolv_content: |
+      nameserver 8.8.8.8
+      nameserver 8.8.4.4
+      search ec2.internal
+      options edns0 trust-ad
+
+  tasks:
+    - name: Backup current resolv.conf
+      copy:
+        src: /etc/resolv.conf
+        dest: /etc/resolv.conf.backup
+        remote_src: yes
+        backup: yes
+
+    - name: Overwrite resolv.conf with static DNS
+      copy:
+        content: "{{ resolv_content }}"
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Ensure systemd-resolved is restarted
+      systemd:
+        name: systemd-resolved
+        state: restarted
+        enabled: yes
+

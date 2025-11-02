@@ -1,0 +1,44 @@
+{
+    "Activities": [
+        {
+            "ActivityId": "507668b8-bbf5-c0ad-c17e-7d3569d0eee5",
+            "AutoScalingGroupName": "aws-k8s-cluster-worker-asg",
+            "Description": "Launching a new EC2 instance.  Status Reason: 'kubernetes.io/role/node' is not a valid tag key. Tag keys must match pattern ([0-9a-zA-Z\\\\-_+=,.@:]{1,255}), and must not be a reserved name ('.', '..', '_index'). Launching EC2 instance failed.",
+            "Cause": "At 2025-10-29T04:16:51Z a user request explicitly set group desired capacity changing the desired capacity from 0 to 2.  At 2025-10-29T04:17:01Z an instance was started in response to a difference between desired and actual capacity, increasing the capacity from 0 to 2.",
+            "StartTime": "2025-10-29T04:17:02.832000+00:00",
+            "EndTime": "2025-10-29T04:17:02+00:00",
+            "StatusCode": "Failed",
+            "StatusMessage": "'kubernetes.io/role/node' is not a valid tag key. Tag keys must match pattern ([0-9a-zA-Z\\\\-_+=,.@:]{1,255}), and must not be a reserved name ('.', '..', '_index'). Launching EC2 instance failed.",
+            "Progress": 100,
+            "Details": "{\"Subnet ID\":\"subnet-039e152c40a543e98\",\"Availability Zone\":\"us-east-1c\"}",
+            "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:837282923642:autoScalingGroup:9d1e5ae6-8853-45f8-9b98-f7381ab46174:autoScalingGroupName/aws-k8s-cluster-worker-asg"
+        },
+        {
+            "ActivityId": "828668b8-bbf4-2676-90ec-2a2d3f90c9ef",
+            "AutoScalingGroupName": "aws-k8s-cluster-worker-asg",
+            "Description": "Launching a new EC2 instance.  Status Reason: 'kubernetes.io/role/node' is not a valid tag key. Tag keys must match pattern ([0-9a-zA-Z\\\\-_+=,.@:]{1,255}), and must not be a reserved name ('.', '..', '_index'). Launching EC2 instance failed.",
+            "Cause": "At 2025-10-29T04:16:51Z a user request explicitly set group desired capacity changing the desired capacity from 0 to 2.  At 2025-10-29T04:17:01Z an instance was started in response to a difference between desired and actual capacity, increasing the capacity from 0 to 2.",
+            "StartTime": "2025-10-29T04:17:02.729000+00:00",
+            "EndTime": "2025-10-29T04:17:02+00:00",
+            "StatusCode": "Failed",
+            "StatusMessage": "'kubernetes.io/role/node' is not a valid tag key. Tag keys must match pattern ([0-9a-zA-Z\\\\-_+=,.@:]{1,255}), and must not be a reserved name ('.', '..', '_index'). Launching EC2 instance failed.",
+            "Progress": 100,
+            "Details": "{\"Subnet ID\":\"subnet-02502b95d1041056e\",\"Availability Zone\":\"us-east-1a\"}",
+            "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:837282923642:autoScalingGroup:9d1e5ae6-8853-45f8-9b98-f7381ab46174:autoScalingGroupName/aws-k8s-cluster-worker-asg"
+        },
+        {
+            "ActivityId": "c3e668b8-a658-9e15-064d-25705afb1cbd",
+            "AutoScalingGroupName": "aws-k8s-cluster-worker-asg",
+            "Description": "Launching a new EC2 instance.  Status Reason: 'kubernetes.io/role/node' is not a valid tag key. Tag keys must match pattern ([0-9a-zA-Z\\\\-_+=,.@:]{1,255}), and must not be a reserved name ('.', '..', '_index'). Launching EC2 instance failed.",
+            "Cause": "At 2025-10-29T04:10:58Z a user request explicitly set group desired capacity changing the desired capacity from 0 to 2.  At 2025-10-29T04:11:07Z an instance was started in response to a difference between desired and actual capacity, increasing the capacity from 0 to 2.",
+            "StartTime": "2025-10-29T04:11:08.711000+00:00",
+            "EndTime": "2025-10-29T04:11:08+00:00",
+            "StatusCode": "Failed",
+            "StatusMessage": "'kubernetes.io/role/node' is not a valid tag key. Tag keys must match pattern ([0-9a-zA-Z\\\\-_+=,.@:]{1,255}), and must not be a reserved name ('.', '..', '_index'). Launching EC2 instance failed.",
+            "Progress": 100,
+            "Details": "{\"Subnet ID\":\"subnet-04cf33c8f79843ddc\",\"Availability Zone\":\"us-east-1b\"}",
+            "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:837282923642:autoScalingGroup:9d1e5ae6-8853-45f8-9b98-f7381ab46174:autoScalingGroupName/aws-k8s-cluster-worker-asg"
+        }
+    ],
+    "NextToken": "c84668b8-a657-99e2-240c-2e6ac63b1708"
+}
