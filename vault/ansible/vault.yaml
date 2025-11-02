@@ -1,0 +1,195 @@
+---
+# vault-install.yml - Ansible Playbook to install HashiCorp Vault (Binary)
+
+- name: Install and Configure HashiCorp Vault
+  hosts: vault
+  become: yes
+  vars:
+    vault_version: "1.15.0"
+    vault_user: "vault"
+    vault_group: "vault"
+    vault_bin_path: "/usr/local/bin/vault"
+    vault_config_path: "/etc/vault.d"
+    vault_data_path: "/opt/vault/data"
+    vault_log_path: "/var/log/vault"
+    vault_download_url: "https://releases.hashicorp.com/vault/{{ vault_version }}/vault_{{ vault_version }}_linux_amd64.zip"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - unzip
+          - curl
+          - jq
+        state: present
+
+    - name: Create vault group
+      group:
+        name: "{{ vault_group }}"
+        state: present
+        system: yes
+
+    - name: Create vault user
+      user:
+        name: "{{ vault_user }}"
+        group: "{{ vault_group }}"
+        system: yes
+        shell: /bin/false
+        home: "{{ vault_data_path }}"
+        createhome: no
+
+    - name: Create vault directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ vault_user }}"
+        group: "{{ vault_group }}"
+        mode: '0755'
+      loop:
+        - "{{ vault_config_path }}"
+        - "{{ vault_data_path }}"
+        - "{{ vault_log_path }}"
+
+    - name: Download Vault binary
+      get_url:
+        url: "{{ vault_download_url }}"
+        dest: "/tmp/vault_{{ vault_version }}_linux_amd64.zip"
+        mode: '0644'
+
+    - name: Unzip Vault binary
+      unarchive:
+        src: "/tmp/vault_{{ vault_version }}_linux_amd64.zip"
+        dest: /usr/local/bin
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Set capabilities on Vault binary (for mlock)
+      command: setcap cap_ipc_lock=+ep {{ vault_bin_path }}
+      args:
+        creates: "{{ vault_bin_path }}"
+      changed_when: false
+
+    - name: Create Vault configuration file
+      copy:
+        dest: "{{ vault_config_path }}/vault.hcl"
+        owner: "{{ vault_user }}"
+        group: "{{ vault_group }}"
+        mode: '0640'
+        content: |
+          ui = true
+          
+          storage "file" {
+            path = "{{ vault_data_path }}"
+          }
+          
+          listener "tcp" {
+            address       = "127.0.0.1:8200"
+            tls_disable   = 1
+          }
+          
+          api_addr = "http://127.0.0.1:8200"
+          cluster_addr = "https://127.0.0.1:8201"
+          log_level = "info"
+
+    - name: Create Vault systemd service file
+      copy:
+        dest: /etc/systemd/system/vault.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=HashiCorp Vault - A tool for managing secrets
+          Documentation=https://www.vaultproject.io/docs/
+          Requires=network-online.target
+          After=network-online.target
+          ConditionFileNotEmpty={{ vault_config_path }}/vault.hcl
+          
+          [Service]
+          Type=notify
+          User={{ vault_user }}
+          Group={{ vault_group }}
+          ProtectSystem=full
+          ProtectHome=read-only
+          PrivateTmp=yes
+          PrivateDevices=yes
+          SecureBits=keep-caps
+          AmbientCapabilities=CAP_IPC_LOCK
+          CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+          NoNewPrivileges=yes
+          ExecStart={{ vault_bin_path }} server -config={{ vault_config_path }}/vault.hcl
+          ExecReload=/bin/kill --signal HUP $MAINPID
+          KillMode=process
+          KillSignal=SIGINT
+          Restart=on-failure
+          RestartSec=5
+          TimeoutStopSec=30
+          LimitNOFILE=65536
+          LimitMEMLOCK=infinity
+          
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable Vault service
+      systemd:
+        name: vault
+        enabled: yes
+
+    - name: Start Vault service
+      systemd:
+        name: vault
+        state: started
+
+    - name: Wait for Vault to be ready
+      wait_for:
+        host: 127.0.0.1
+        port: 8200
+        delay: 5
+        timeout: 60
+
+    - name: Check Vault status
+      command: "{{ vault_bin_path }} status"
+      environment:
+        VAULT_ADDR: "http://127.0.0.1:8200"
+      register: vault_status
+      failed_when: false
+      changed_when: false
+
+    - name: Display Vault status
+      debug:
+        var: vault_status.stdout_lines
+
+    - name: Create vault environment file
+      copy:
+        dest: /etc/profile.d/vault.sh
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          export VAULT_ADDR='http://127.0.0.1:8200'
+
+    - name: Display initialization instructions
+      debug:
+        msg:
+          - "Vault has been installed and started successfully!"
+          - "To initialize Vault, run the following commands on the server:"
+          - "  export VAULT_ADDR='http://127.0.0.1:8200'"
+          - "  vault operator init"
+          - ""
+          - "IMPORTANT: Save the unseal keys and root token securely!"
+          - ""
+          - "To unseal Vault:"
+          - "  vault operator unseal <unseal-key-1>"
+          - "  vault operator unseal <unseal-key-2>"
+          - "  vault operator unseal <unseal-key-3>"
