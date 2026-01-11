@@ -8,22 +8,11 @@ provider "aws" {
 provider "talos" {
 }
 
-locals {
-  extra_provisioner_environment_variables = {
-    CLUSTER_NAME = var.cluster_name
-    CLUSTER_ID   = var.cluster_id
-    POD_CIDR     = var.pod_cidr
-    KUBECONFIG   = module.talos_cluster.path_to_kubeconfig_file
-    KUBE_APISERVER_HOST = "localhost"
-    KUBE_APISERVER_PORT = "7445"
-  }
-}
-
 module "talos_cluster" {
-  source = "git::https://github.com/isovalent/terraform-aws-talos?ref=v0.9.0"
+  source = "../terraform-aws-talos-module"
 
   cluster_name    = var.cluster_name
-  cluster_id      = var.cluster_id
+  cluster_id      = 1
   region          = var.region
   vpc_id          = var.vpc_id
   vpc_cidr        = var.vpc_cidr
@@ -42,41 +31,40 @@ module "talos_cluster" {
   service_cidr                   = var.service_cidr
 
   disable_kube_proxy             = var.disable_kube_proxy
-  disable_containerd_nri_plugins = var.disable_containerd_nri_plugins
-  allow_workload_on_cp_nodes     = var.allow_workload_on_cp_nodes
-  allocate_node_cidrs            = var.allocate_node_cidrs
+  disable_containerd_nri_plugins = true
+  allow_workload_on_cp_nodes     = false
+  allocate_node_cidrs            = true
 
   external_source_cidrs          = var.external_source_cidrs
 
-  admission_plugins              = var.admission_plugins
-  config_patch_files             = var.config_patch_files
-
   enable_external_cloud_provider              = var.enable_external_cloud_provider
   deploy_external_cloud_provider_iam_policies = var.deploy_external_cloud_provider_iam_policies
-  external_cloud_provider_manifest            = var.enable_external_cloud_provider ? var.external_cloud_provider_manifest : ""
+  external_cloud_provider_manifest            = var.enable_external_cloud_provider ? "https://raw.githubusercontent.com/isovalent/terraform-aws-talos/main/manifests/aws-cloud-controller.yaml" : ""
 
-  iam_instance_profile_control_plane = var.iam_instance_profile_control_plane
-  iam_instance_profile_worker        = var.iam_instance_profile_worker
-  metadata_options                   = var.metadata_options
+  root_volume_size                  = var.root_volume_size
 }
 
 module "cilium" {
   count = var.enable_cilium ? 1 : 0
   source = "git::https://github.com/isovalent/terraform-k8s-cilium.git?ref=v1.6.7"
 
-  depends_on = [
-    module.talos_cluster
-  ]
+  depends_on = [module.talos_cluster]
 
-  cilium_helm_release_name              = "cilium"
-  wait_for_total_control_plane_nodes    = true
-  total_control_plane_nodes             = var.controlplane_count
-  cilium_helm_values_file_path          = var.cilium_helm_values_file_path
-  cilium_helm_version                   = var.cilium_helm_version
-  cilium_helm_chart                     = var.cilium_helm_chart
-  path_to_kubeconfig_file               = module.talos_cluster.path_to_kubeconfig_file
-  cilium_helm_values_override_file_path = var.cilium_helm_values_override_file_path
-  pre_cilium_install_script             = var.pre_cilium_install_script != "" ? file(var.pre_cilium_install_script) : ""
-  post_cilium_install_script            = var.post_cilium_install_script != "" ? file(var.post_cilium_install_script) : ""
-  extra_provisioner_environment_variables = local.extra_provisioner_environment_variables
+  cilium_helm_release_name        = "cilium"
+  wait_for_total_control_plane_nodes = true
+  total_control_plane_nodes       = var.controlplane_count
+  cilium_helm_values_file_path    = var.cilium_helm_values_file_path
+  cilium_helm_version             = var.cilium_helm_version
+  cilium_helm_chart               = "cilium/cilium"
+  path_to_kubeconfig_file         = module.talos_cluster.path_to_kubeconfig_file
+}
+
+output "kubeconfig_path" {
+  description = "Path to kubeconfig file"
+  value       = module.talos_cluster.path_to_kubeconfig_file
+}
+
+output "talosconfig_path" {
+  description = "Path to talosconfig file"
+  value       = module.talos_cluster.path_to_talosconfig_file
 }
