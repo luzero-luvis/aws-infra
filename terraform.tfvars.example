@@ -5,7 +5,7 @@ external_source_cidrs = ["0.0.0.0/0"]
 
 talos_version = "v1.11.2"
 
-controlplane_count = 3
+controlplane_count = 2
 workers_count      = 2
 
 control_plane = {
