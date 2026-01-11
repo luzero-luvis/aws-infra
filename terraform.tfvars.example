@@ -1,0 +1,33 @@
+cluster_name          = "my-talos-cluster"
+cluster_id            = 1
+cluster_architecture  = "amd64"
+region                = "us-east-1"
+vpc_id                = "vpc-xxxxxxxxxxxxxxxxx"
+vpc_cidr              = "10.0.0.0/16"
+external_source_cidrs = ["0.0.0.0/0"]
+
+talos_version       = "v1.11.2"
+kubernetes_version  = ""
+
+controlplane_count = 3
+workers_count      = 2
+
+pod_cidr     = "100.64.0.0/14"
+service_cidr = "100.68.0.0/16"
+
+disable_kube_proxy         = true
+disable_containerd_nri_plugins = true
+allow_workload_on_cp_nodes = false
+allocate_node_cidrs        = true
+
+enable_external_cloud_provider              = false
+deploy_external_cloud_provider_iam_policies = false
+external_cloud_provider_manifest            = "https://raw.githubusercontent.com/isovalent/terraform-aws-talos/main/manifests/aws-cloud-controller.yaml"
+
+enable_cilium              = true
+cilium_helm_chart          = "cilium/cilium"
+cilium_helm_version        = "1.17.4"
+cilium_helm_values_file_path = "cilium-values.yaml"
+cilium_helm_values_override_file_path = ""
+pre_cilium_install_script  = "scripts/pre-cilium-install.sh"
+post_cilium_install_script = ""
