@@ -53,7 +53,7 @@ variable "cluster_architecture" {
 variable "controlplane_count" {
   description = "Number of control plane nodes"
   type        = number
-  default     = 3
+  default     = 2
 }
 
 variable "workers_count" {
