@@ -39,7 +39,7 @@ ipam:
   mode: cluster-pool
   operator:
     clusterPoolIPv4PodCIDRList:
-    - ${POD_CIDR}
+    - "100.64.0.0/14"
 
 cgroup:
   autoMount:

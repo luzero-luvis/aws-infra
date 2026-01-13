@@ -34,7 +34,7 @@ output "load_balancer_zone_id" {
   value       = module.talos_cluster.lb_zone_id
 }
 
-output "control_plane_node_ips" {
+/* output "control_plane_node_ips" {
   description = "Public IP addresses of control plane nodes"
   value       = module.talos_cluster.control_plane_public_ips
 }
@@ -42,4 +42,4 @@ output "control_plane_node_ips" {
 output "worker_node_ips" {
   description = "Public IP addresses of worker nodes"
   value       = module.talos_cluster.worker_public_ips
-}
+} */

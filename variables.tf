@@ -10,8 +10,15 @@ variable "region" {
 }
 
 variable "vpc_id" {
-  description = "ID of the VPC where to place the VMs"
+  description = "ID of the VPC (leave empty to create new VPC)"
   type        = string
+  default     = ""
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC (used when creating new VPC)"
+  type        = string
+  default     = "10.0.0.0/16"
 }
 
 variable "external_source_cidrs" {
@@ -21,8 +28,9 @@ variable "external_source_cidrs" {
 
 # Optional overrides
 variable "root_volume_size" {
-  description = "Root volume size in GB (default 150GB)"
+  description = "Root volume size in GB (note: module uses 50GB by default)"
   type        = number
+  default     = 150
 }
 
 variable "talos_version" {
@@ -130,4 +138,10 @@ variable "cilium_helm_values_file_path" {
   description = "Path to Cilium Helm values file"
   type        = string
   default     = "cilium-values.yaml"
+}
+
+variable "cilium_helm_values_override_file_path" {
+  description = "Path to Cilium Helm values override file"
+  type        = string
+  default     = ""
 }
