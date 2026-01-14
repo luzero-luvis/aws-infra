@@ -111,7 +111,7 @@ vault_data_path=/opt/vault/data
 vault_log_level=info
 EOF
 
-  filename = "/home/luvisjostonj/aws_infra/vault/ansible/inventory.ini"
+  filename = "./ansible/inventory.ini"
   
   depends_on = [aws_instance.vault_server]
 }
