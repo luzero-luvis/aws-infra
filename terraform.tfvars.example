@@ -3,7 +3,7 @@ region                = "us-east-1"
 vpc_id                = "vpc-xxxxxxxxxxxxxxxxx"
 external_source_cidrs = ["0.0.0.0/0"]
 
-talos_version = "v1.11.2"
+talos_version = "v1.12.1"
 
 controlplane_count = 2
 workers_count      = 2

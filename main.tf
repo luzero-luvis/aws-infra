@@ -8,8 +8,25 @@ provider "aws" {
 provider "talos" {
 }
 
+# Get available AZs dynamically
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
 resource "random_id" "cluster" {
   byte_length = 4
+}
+
+locals {
+  # Use first 3 available AZs in the region
+  availability_zones = slice(data.aws_availability_zones.available.names, 0, min(3, length(data.aws_availability_zones.available.names)))
+  
+  # Longhorn extensions list - will be installed manually after cluster is up
+  # (machine.install.extensions is deprecated in v1.12)
+  longhorn_extensions = var.enable_longhorn_prerequisites ? [
+    "ghcr.io/siderolabs/iscsi-tools:v0.1.6",
+    "ghcr.io/siderolabs/util-linux-tools:2.40.2",
+  ] : []
 }
 
 module "vpc" {
@@ -20,7 +37,7 @@ module "vpc" {
   region = var.region
   tags   = var.tags
 
-  availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1f"]
+  availability_zones = local.availability_zones
 }
 
 module "talos_cluster" {
@@ -32,24 +49,25 @@ module "talos_cluster" {
   vpc_id          = module.vpc.id
   tags            = var.tags
 
-  talos_version                  = var.talos_version
-  kubernetes_version             = var.kubernetes_version
-  cluster_architecture           = var.cluster_architecture
+  # Talos v1.12.0 with Kubernetes 1.35.0
+  talos_version        = var.talos_version
+  kubernetes_version   = var.kubernetes_version
+  cluster_architecture = var.cluster_architecture
 
-  controlplane_count             = var.controlplane_count
-  workers_count                  = var.workers_count
-  control_plane                  = var.control_plane
-  worker_groups                  = var.worker_groups
+  controlplane_count = var.controlplane_count
+  workers_count      = var.workers_count
+  control_plane      = var.control_plane
+  worker_groups      = var.worker_groups
 
-  pod_cidr                       = var.pod_cidr
-  service_cidr                   = var.service_cidr
+  pod_cidr     = var.pod_cidr
+  service_cidr = var.service_cidr
 
   disable_kube_proxy             = var.disable_kube_proxy
   disable_containerd_nri_plugins = true
   allow_workload_on_cp_nodes     = false
   allocate_node_cidrs            = false
 
-  external_source_cidrs          = var.external_source_cidrs
+  external_source_cidrs = var.external_source_cidrs
 
   enable_external_cloud_provider              = var.enable_external_cloud_provider
   deploy_external_cloud_provider_iam_policies = var.deploy_external_cloud_provider_iam_policies
@@ -57,26 +75,25 @@ module "talos_cluster" {
 }
 
 module "cilium" {
-  count = var.enable_cilium ? 1 : 0
+  count  = var.enable_cilium ? 1 : 0
   source = "git::https://github.com/isovalent/terraform-k8s-cilium.git?ref=v1.6.7"
 
   depends_on = [module.talos_cluster]
 
-  cilium_helm_release_name        = "cilium"
-  wait_for_total_control_plane_nodes = true
-  total_control_plane_nodes       = var.controlplane_count
-  cilium_helm_values_file_path        = var.cilium_helm_values_file_path
+  cilium_helm_release_name              = "cilium"
+  wait_for_total_control_plane_nodes    = true
+  total_control_plane_nodes             = var.controlplane_count
+  cilium_helm_values_file_path          = var.cilium_helm_values_file_path
   cilium_helm_values_override_file_path = var.cilium_helm_values_override_file_path
-  cilium_helm_version                  = var.cilium_helm_version
-  cilium_helm_chart               = "cilium/cilium"
-  path_to_kubeconfig_file         = module.talos_cluster.path_to_kubeconfig_file
+  cilium_helm_version                   = var.cilium_helm_version
+  cilium_helm_chart                     = "cilium/cilium"
+  path_to_kubeconfig_file               = module.talos_cluster.path_to_kubeconfig_file
 
   extra_provisioner_environment_variables = {
-    CLUSTER_NAME         = var.cluster_name
-    CLUSTER_ID           = "1"
-    POD_CIDR             = var.pod_cidr
-    KUBE_APISERVER_HOST  = "localhost"
-    KUBE_APISERVER_PORT  = "7445"
+    CLUSTER_NAME        = var.cluster_name
+    CLUSTER_ID          = "1"
+    POD_CIDR            = var.pod_cidr
+    KUBE_APISERVER_HOST = "localhost"
+    KUBE_APISERVER_PORT = "7445"
   }
 }
-

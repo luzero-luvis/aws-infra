@@ -1,4 +1,4 @@
-# Required variables (not in module)
+# Required variables
 variable "cluster_name" {
   description = "Name of the Talos cluster"
   type        = string
@@ -9,14 +9,8 @@ variable "region" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "ID of the VPC (leave empty to create new VPC)"
-  type        = string
-  default     = ""
-}
-
 variable "vpc_cidr" {
-  description = "CIDR block for the VPC (used when creating new VPC)"
+  description = "CIDR block for the VPC"
   type        = string
   default     = "10.0.0.0/16"
 }
@@ -28,7 +22,7 @@ variable "external_source_cidrs" {
 
 # Optional overrides
 variable "root_volume_size" {
-  description = "Root volume size in GB (note: module uses 50GB by default)"
+  description = "Root volume size in GB"
   type        = number
   default     = 150
 }
@@ -144,4 +138,41 @@ variable "cilium_helm_values_override_file_path" {
   description = "Path to Cilium Helm values override file"
   type        = string
   default     = ""
+}
+
+# Longhorn variables
+variable "enable_longhorn_prerequisites" {
+  description = "Enable Longhorn prerequisites (system extensions and configuration)"
+  type        = bool
+  default     = true
+}
+
+variable "longhorn_default_path" {
+  description = "Default data path for Longhorn volumes"
+  type        = string
+  default     = "/var/lib/longhorn"
+}
+
+variable "longhorn_replica_count" {
+  description = "Number of replicas per volume"
+  type        = number
+  default     = 3
+}
+
+variable "longhorn_storage_class" {
+  description = "Name of the Longhorn StorageClass"
+  type        = string
+  default     = "longhorn"
+}
+
+variable "enable_nvme_tcp" {
+  description = "Enable NVMe TCP kernel module for Longhorn V2 Data Engine"
+  type        = bool
+  default     = false
+}
+
+variable "enable_nfs_support" {
+  description = "Enable NFS support for ReadWriteMany volumes"
+  type        = bool
+  default     = true
 }
